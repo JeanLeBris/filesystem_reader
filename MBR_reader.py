@@ -68,12 +68,13 @@ class MBR_entry:
     def display_self_data(self):
         # print(self.get_self_data(), end="")
         # pass
-        print(f"Drive attributes : {self.drive_attributes}")
-        print(f"CHS address of partition start : {self.CHS_address_of_partition_start}")
-        print(f"Partition type : {self.partition_type} : {self.partition_type_str}")
-        print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
-        print(f"LBA of partition start : {self.LBA_of_partition_start}")
-        print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
+        # print(f"Drive attributes : {self.drive_attributes}")
+        # print(f"CHS address of partition start : {self.CHS_address_of_partition_start}")
+        # print(f"Partition type : {self.partition_type} : {self.partition_type_str}")
+        # print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
+        # print(f"LBA of partition start : {self.LBA_of_partition_start}")
+        # print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
+        print(f"{self.partition_type} : {self.partition_type_str} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
 
 class MBR:
     input_path: str
@@ -108,21 +109,29 @@ class MBR:
         self.valid_bootsector = convert_bytes_to_bytes(boot_sector, 510, 2)
 
         partition_entry = MBR_entry(self.first_partition_entry, self)
+        self.elements.append(partition_entry)
         partition_entry.process_data()
-        if partition_entry.check_if_exist():
-            self.elements.append(partition_entry)
+        if not(partition_entry.check_if_exist()):
+            # self.elements.append(partition_entry)
+            self.elements.pop(-1)
         partition_entry = MBR_entry(self.second_partition_entry, self)
+        self.elements.append(partition_entry)
         partition_entry.process_data()
-        if partition_entry.check_if_exist():
-            self.elements.append(partition_entry)
+        if not(partition_entry.check_if_exist()):
+            # self.elements.append(partition_entry)
+            self.elements.pop(-1)
         partition_entry = MBR_entry(self.third_partition_entry, self)
+        self.elements.append(partition_entry)
         partition_entry.process_data()
-        if partition_entry.check_if_exist():
-            self.elements.append(partition_entry)
+        if not(partition_entry.check_if_exist()):
+            # self.elements.append(partition_entry)
+            self.elements.pop(-1)
         partition_entry = MBR_entry(self.fourth_partition_entry, self)
+        self.elements.append(partition_entry)
         partition_entry.process_data()
-        if partition_entry.check_if_exist():
-            self.elements.append(partition_entry)
+        if not(partition_entry.check_if_exist()):
+            # self.elements.append(partition_entry)
+            self.elements.pop(-1)
 
     def display_header_data(self):
         print(f"MBR bootstrap : {self.MBR_bootstrap}")
@@ -136,9 +145,9 @@ class MBR:
 
         print()
         for i in range(len(self.elements)):
-            print(i)
+            # print(i)
             self.elements[i].display_self_data()
-            print()
+            # print()
     
     def get_partition_entry(self, entry_value: int):
         pass

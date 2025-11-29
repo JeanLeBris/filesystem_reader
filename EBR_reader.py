@@ -67,12 +67,13 @@ class EBR_entry:
     def display_self_data(self):
         # print(self.get_self_data(), end="")
         # pass
-        print(f"Drive attributes : {self.drive_attributes}")
-        print(f"CHS address of partition start : {self.CHS_address_of_partition_start}")
-        print(f"Partition type : {self.partition_type} : {self.partition_type_str}")
-        print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
-        print(f"LBA of partition start : {self.LBA_of_partition_start}")
-        print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
+        # print(f"Drive attributes : {self.drive_attributes}")
+        # print(f"CHS address of partition start : {self.CHS_address_of_partition_start}")
+        # print(f"Partition type : {self.partition_type} : {self.partition_type_str}")
+        # print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
+        # print(f"LBA of partition start : {self.LBA_of_partition_start}")
+        # print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
+        print(f"{self.partition_type} : {self.partition_type_str} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
 
 class EBR:
     input_path: str
@@ -87,8 +88,6 @@ class EBR:
     valid_bootsector: bytes
 
     elements: list[EBR_entry]
-    elements1: list[EBR_entry]
-    elements2: list[EBR_entry]
 
     def __init__(self, file_path: str, gen_offset: int, ebr_offset: int):
         self.input_path = file_path
@@ -110,13 +109,17 @@ class EBR:
         self.valid_bootsector = convert_bytes_to_bytes(boot_sector, 510, 2)
 
         partition_entry = EBR_entry(self.first_partition_entry, self)
+        self.elements.append(partition_entry)
         partition_entry.process_data()
-        if partition_entry.check_if_exist():
-            self.elements.append(partition_entry)
+        if not(partition_entry.check_if_exist()):
+            # self.elements.append(partition_entry)
+            self.elements.pop(-1)
         partition_entry = EBR_entry(self.second_partition_entry, self)
+        self.elements.append(partition_entry)
         partition_entry.process_data()
-        if partition_entry.check_if_exist():
-            self.elements.append(partition_entry)
+        if not(partition_entry.check_if_exist()) or partition_entry.partition_type_str == "Extended LBA" or partition_entry.partition_type_str == "Extended CHS":
+            # self.elements.append(partition_entry)
+            self.elements.pop(-1)
         # partition_entry = EBR_entry(self.third_partition_entry, self)
         # partition_entry.process_data()
         # if partition_entry.check_if_exist():

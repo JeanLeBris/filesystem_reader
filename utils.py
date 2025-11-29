@@ -32,17 +32,13 @@ def MBR_EBR_partition_type_int_to_str(partition_type: int):
         case 6:
             result = "FAT16"
         case 7:
-            result = "exFAT"
+            result = "HPFS/NTFS/exFAT"
         case 11:
             result = "FAT32"
         case 15:
             result = "Extended LBA"
-        case 34:
-            result = "Reserved"
         case 131:
-            result = "ext"
-        case 198:
-            result = "FAT16 again"
+            result = "Linux"
         case _:
             result = "undefined"
     return result
