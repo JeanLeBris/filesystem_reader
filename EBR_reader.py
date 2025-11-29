@@ -140,9 +140,9 @@ class EBR:
 
         print()
         for i in range(len(self.elements)):
-            print(i)
+            # print(i)
             self.elements[i].display_self_data()
-            print()
+            # print()
     
     def get_partition_entry(self, entry_value: int):
         pass
