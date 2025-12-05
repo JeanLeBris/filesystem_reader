@@ -57,7 +57,7 @@ class MBR_entry:
             self.partition = EBR(self.filesystem.input_path, self.LBA_of_partition_start, self.LBA_of_partition_start)
             self.partition.analyse_header()
             # print(len(self.filesystem.elements))
-            self.filesystem.elements += self.partition.elements
+            # self.filesystem.elements += self.partition.elements
             # print(len(self.filesystem.elements))
             # self.partition.display_header_data()
     
@@ -111,27 +111,40 @@ class MBR:
         partition_entry = MBR_entry(self.first_partition_entry, self)
         self.elements.append(partition_entry)
         partition_entry.process_data()
-        if not(partition_entry.check_if_exist()):
-            # self.elements.append(partition_entry)
-            self.elements.pop(-1)
+        # if not(partition_entry.check_if_exist()):
+        #     # self.elements.append(partition_entry)
+        #     self.elements.pop(-1)
         partition_entry = MBR_entry(self.second_partition_entry, self)
         self.elements.append(partition_entry)
         partition_entry.process_data()
-        if not(partition_entry.check_if_exist()):
-            # self.elements.append(partition_entry)
-            self.elements.pop(-1)
+        # if not(partition_entry.check_if_exist()):
+        #     # self.elements.append(partition_entry)
+        #     self.elements.pop(-1)
         partition_entry = MBR_entry(self.third_partition_entry, self)
         self.elements.append(partition_entry)
         partition_entry.process_data()
-        if not(partition_entry.check_if_exist()):
-            # self.elements.append(partition_entry)
-            self.elements.pop(-1)
+        # if not(partition_entry.check_if_exist()):
+        #     # self.elements.append(partition_entry)
+        #     self.elements.pop(-1)
         partition_entry = MBR_entry(self.fourth_partition_entry, self)
         self.elements.append(partition_entry)
         partition_entry.process_data()
-        if not(partition_entry.check_if_exist()):
-            # self.elements.append(partition_entry)
-            self.elements.pop(-1)
+        # if not(partition_entry.check_if_exist()):
+        #     # self.elements.append(partition_entry)
+        #     self.elements.pop(-1)
+
+        self.elements = self.flattent_elements()
+    
+    def flattent_elements(self):
+        new_elements = []
+
+        for element in self.elements:
+            if element.partition_type_str != "undefined":
+                new_elements.append(element)
+                if element.partition_type_str == "Extended LBA" or element.partition_type_str == "Extended CHS":
+                    new_elements += element.partition.flatten_elements()
+        # print(new_elements)
+        return new_elements
 
     def display_header_data(self):
         print(f"MBR bootstrap : {self.MBR_bootstrap}")

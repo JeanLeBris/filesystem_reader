@@ -56,7 +56,7 @@ class EBR_entry:
             self.partition = EBR(self.filesystem.input_path, self.filesystem.ebr_offset + self.LBA_of_partition_start, self.filesystem.ebr_offset)
             self.partition.analyse_header()
             # print(len(self.filesystem.elements))
-            self.filesystem.elements += self.partition.elements
+            # self.filesystem.elements += self.partition.elements
             # print(len(self.filesystem.elements))
             # self.partition.display_header_data()
     
@@ -111,15 +111,15 @@ class EBR:
         partition_entry = EBR_entry(self.first_partition_entry, self)
         self.elements.append(partition_entry)
         partition_entry.process_data()
-        if not(partition_entry.check_if_exist()):
-            # self.elements.append(partition_entry)
-            self.elements.pop(-1)
+        # if not(partition_entry.check_if_exist()):
+        #     # self.elements.append(partition_entry)
+        #     self.elements.pop(-1)
         partition_entry = EBR_entry(self.second_partition_entry, self)
         self.elements.append(partition_entry)
         partition_entry.process_data()
-        if not(partition_entry.check_if_exist()) or partition_entry.partition_type_str == "Extended LBA" or partition_entry.partition_type_str == "Extended CHS":
-            # self.elements.append(partition_entry)
-            self.elements.pop(-1)
+        # if not(partition_entry.check_if_exist()) or partition_entry.partition_type_str == "Extended LBA" or partition_entry.partition_type_str == "Extended CHS":
+        #     # self.elements.append(partition_entry)
+        #     self.elements.pop(-1)
         # partition_entry = EBR_entry(self.third_partition_entry, self)
         # partition_entry.process_data()
         # if partition_entry.check_if_exist():
@@ -128,6 +128,19 @@ class EBR:
         # partition_entry.process_data()
         # if partition_entry.check_if_exist():
         #     self.elements.append(partition_entry)
+    
+    def flatten_elements(self):
+        new_elements = []
+
+        for element in self.elements:
+            if element.partition_type_str != "undefined":
+                # new_elements.append(element)
+                if element.partition_type_str == "Extended LBA" or element.partition_type_str == "Extended CHS":
+                    new_elements += element.partition.flatten_elements()
+                else:
+                    new_elements.append(element)
+        # print(new_elements)
+        return new_elements
 
     def display_header_data(self):
         print(f"EBR bootstrap : {self.EBR_bootstrap}")
