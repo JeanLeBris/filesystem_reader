@@ -16,12 +16,14 @@ class MBR_entry:
     number_of_sectors_in_partition: int
 
     partition_type_whitelist: list[str]
+    has_a_partition: bool
 
     def __init__(self, partition_entry: bytes, filesystem):
         self.filesystem = filesystem
         self.partition_entry = partition_entry
         self.partition_type_whitelist = filesystem.partition_type_whitelist
         self.partition_type_str = None
+        self.has_a_partition = False
 
         # self.content = self.filesystem.get_partition_entry(self.entry_value)
     
@@ -55,18 +57,29 @@ class MBR_entry:
         
         if self.partition_type_str == "Extended CHS" or self.partition_type_str == "Extended LBA":
             self.partition = EBR(self.filesystem.input_path, self.LBA_of_partition_start, self.LBA_of_partition_start, self.partition_type_whitelist)
+            self.has_a_partition = True
             self.partition.analyse_header()
             # print(len(self.filesystem.elements))
             # self.filesystem.elements += self.partition.elements
             # print(len(self.filesystem.elements))
             # self.partition.display_header_data()
+        elif self.partition_type_str == "HPFS/NTFS/exFAT":
+            jump_code = bytes()
+            with open(self.filesystem.input_path, "rb") as f:
+                f.seek(self.LBA_of_partition_start*512, 0)
+                jump_code = convert_bytes_to_bytes(f.read(512), 0, 3)
+            
+            if jump_code == bytes([0xeb, 0x76, 0x90]):
+                self.partition = exFAT(self.filesystem.input_path, self.LBA_of_partition_start*512)
+                self.has_a_partition = True
+                self.partition.analyse_boot_sector()
     
     def get_self_data(self):
         # return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
         pass
 
     def is_readable(self):
-        if self.partition_type_str in self.partition_type_whitelist:
+        if self.partition_type_str in self.partition_type_whitelist and self.has_a_partition:
             return True
         else:
             return False
@@ -188,10 +201,10 @@ if __name__=="__main__":
     parser1 = subparser1.add_parser("tree")
     parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
 
-    # parser1 = subparser1.add_parser("export")
-    # parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
-    # parser1.add_argument("-p", "--path", action="store", required=True, help="input iso file")
-    # parser1.add_argument("-o", "--output", action="store", required=True, help="output file")
+    parser1 = subparser1.add_parser("export")
+    parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
+    parser1.add_argument("-p", "--path", action="store", required=True, help="input iso file")
+    parser1.add_argument("-o", "--output", action="store", required=True, help="output file")
 
     args = parser.parse_args()
 
@@ -207,21 +220,23 @@ if __name__=="__main__":
         # partition.root_dir.display_self_data()
         # partition.root_dir.display_tree_data(1)
         for partition in filesystem.elements:
-            partition.partition.root_dir.display_self_data()
-            partition.partition.root_dir.display_tree_data(1)
-    # elif args.action == "export":
-    #     # read_fs(args.input)
-    #     filesystem = MBR(args.input)
-    #     filesystem.analyse_header()
-    #     # content = partition.get_filesystem_entry_content(args.path)
-    #     for partition in filesystem.elements:
-    #         content = partition.partition.get_filesystem_entry_content(args.path)
-    #         if content != None:
-    #             break
-    #     if content != None:
-    #         if isinstance(content, str):
-    #             content = content.encode(encoding="utf-8")
-    #         with open(args.output, "bw") as f:
-    #             f.write(content)
-    #     else:
-    #         print("Path doesn't exist")
+            if partition.is_readable():
+                partition.partition.root_dir.display_self_data()
+                partition.partition.root_dir.display_tree_data(1)
+    elif args.action == "export":
+        # read_fs(args.input)
+        filesystem = MBR(args.input, partition_whitelist)
+        filesystem.analyse_header()
+        # content = partition.get_filesystem_entry_content(args.path)
+        for partition in filesystem.elements:
+            if partition.is_readable():
+                content = partition.partition.get_filesystem_entry_content(args.path)
+                if content != None:
+                    break
+        if content != None:
+            if isinstance(content, str):
+                content = content.encode(encoding="utf-8")
+            with open(args.output, "bw") as f:
+                f.write(content)
+        else:
+            print("Path doesn't exist")

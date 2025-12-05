@@ -15,12 +15,14 @@ class EBR_entry:
     number_of_sectors_in_partition: int
 
     partition_type_whitelist: list[str]
+    has_a_partition: bool
 
     def __init__(self, partition_entry: bytes, filesystem):
         self.filesystem = filesystem
         self.partition_entry = partition_entry
         self.partition_type_whitelist = filesystem.partition_type_whitelist
         self.partition_type_str = None
+        self.has_a_partition = False
 
         # self.content = self.filesystem.get_partition_entry(self.entry_value)
     
@@ -54,6 +56,7 @@ class EBR_entry:
         
         if self.partition_type_str == "Extended CHS" or self.partition_type_str == "Extended LBA":
             self.partition = EBR(self.filesystem.input_path, self.filesystem.ebr_offset + self.LBA_of_partition_start, self.filesystem.ebr_offset, self.partition_type_whitelist)
+            self.has_a_partition = True
             self.partition.analyse_header()
             self.LBA_of_partition_start += self.filesystem.ebr_offset
             # print(len(self.filesystem.elements))
@@ -62,13 +65,24 @@ class EBR_entry:
             # self.partition.display_header_data()
         else:
             self.LBA_of_partition_start += self.filesystem.gen_offset
+
+        if self.partition_type_str == "HPFS/NTFS/exFAT":
+            jump_code = bytes()
+            with open(self.filesystem.input_path, "rb") as f:
+                f.seek(self.LBA_of_partition_start*512, 0)
+                jump_code = convert_bytes_to_bytes(f.read(512), 0, 3)
+            
+            if jump_code == bytes([0xeb, 0x76, 0x90]):
+                self.partition = exFAT(self.filesystem.input_path, self.LBA_of_partition_start*512)
+                self.has_a_partition = True
+                self.partition.analyse_boot_sector()
     
     def get_self_data(self):
         # return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
         pass
 
     def is_readable(self):
-        if self.partition_type_str in self.partition_type_whitelist:
+        if self.partition_type_str in self.partition_type_whitelist and self.has_a_partition:
             return True
         else:
             return False
