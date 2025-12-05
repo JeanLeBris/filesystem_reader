@@ -19,7 +19,7 @@ class EBR_entry:
     def __init__(self, partition_entry: bytes, filesystem):
         self.filesystem = filesystem
         self.partition_entry = partition_entry
-        self.partition_type_whitelist = ["exFAT"]
+        self.partition_type_whitelist = filesystem.partition_type_whitelist
         self.partition_type_str = None
 
         # self.content = self.filesystem.get_partition_entry(self.entry_value)
@@ -53,7 +53,7 @@ class EBR_entry:
         self.partition_type_str = MBR_EBR_partition_type_int_to_str(self.partition_type)
         
         if self.partition_type_str == "Extended CHS" or self.partition_type_str == "Extended LBA":
-            self.partition = EBR(self.filesystem.input_path, self.filesystem.ebr_offset + self.LBA_of_partition_start, self.filesystem.ebr_offset)
+            self.partition = EBR(self.filesystem.input_path, self.filesystem.ebr_offset + self.LBA_of_partition_start, self.filesystem.ebr_offset, self.partition_type_whitelist)
             self.partition.analyse_header()
             self.LBA_of_partition_start += self.filesystem.ebr_offset
             # print(len(self.filesystem.elements))
@@ -66,6 +66,12 @@ class EBR_entry:
     def get_self_data(self):
         # return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
         pass
+
+    def is_readable(self):
+        if self.partition_type_str in self.partition_type_whitelist:
+            return True
+        else:
+            return False
     
     def display_self_data(self):
         # print(self.get_self_data(), end="")
@@ -76,7 +82,7 @@ class EBR_entry:
         # print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
         # print(f"LBA of partition start : {self.LBA_of_partition_start}")
         # print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
-        print(f"{self.partition_type} : {self.partition_type_str} : {hex(self.LBA_of_partition_start*512)} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
+        print(f"{self.partition_type} : {self.partition_type_str} : {hex(self.LBA_of_partition_start*512)} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition} : {self.is_readable()}")
 
 class EBR:
     input_path: str
@@ -92,11 +98,14 @@ class EBR:
 
     elements: list[EBR_entry]
 
-    def __init__(self, file_path: str, gen_offset: int, ebr_offset: int):
+    partition_type_whitelist: list[str]
+
+    def __init__(self, file_path: str, gen_offset: int, ebr_offset: int, partition_type_whitelist):
         self.input_path = file_path
         self.gen_offset = gen_offset
         self.ebr_offset = ebr_offset
         self.elements = []
+        self.partition_type_whitelist = partition_type_whitelist
     
     def analyse_header(self):
         boot_sector = None
@@ -163,52 +172,52 @@ class EBR:
     def get_partition_entry(self, entry_value: int):
         pass
 
-if __name__=="__main__":
-    parser = argparse.ArgumentParser(prog="fs_reader",
-                                     description="read a GPT file system")
+# if __name__=="__main__":
+#     parser = argparse.ArgumentParser(prog="fs_reader",
+#                                      description="read a GPT file system")
     
-    subparser1 = parser.add_subparsers(dest="action")
+#     subparser1 = parser.add_subparsers(dest="action")
 
-    parser1 = subparser1.add_parser("analyse")
-    parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
+#     parser1 = subparser1.add_parser("analyse")
+#     parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
 
-    # parser1 = subparser1.add_parser("tree")
-    # parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
+#     # parser1 = subparser1.add_parser("tree")
+#     # parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
 
-    # parser1 = subparser1.add_parser("export")
-    # parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
-    # parser1.add_argument("-p", "--path", action="store", required=True, help="input iso file")
-    # parser1.add_argument("-o", "--output", action="store", required=True, help="output file")
+#     # parser1 = subparser1.add_parser("export")
+#     # parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
+#     # parser1.add_argument("-p", "--path", action="store", required=True, help="input iso file")
+#     # parser1.add_argument("-o", "--output", action="store", required=True, help="output file")
 
-    args = parser.parse_args()
+#     args = parser.parse_args()
 
-    if args.action == "analyse":
-        # read_fs(args.input)
-        filesystem = EBR(args.input)
-        filesystem.analyse_header()
-        filesystem.display_header_data()
-    # elif args.action == "tree":
-    #     # read_fs(args.input)
-    #     filesystem = EBR(args.input)
-    #     filesystem.analyse_header()
-    #     # partition.root_dir.display_self_data()
-    #     # partition.root_dir.display_tree_data(1)
-    #     for partition in filesystem.elements:
-    #         partition.partition.root_dir.display_self_data()
-    #         partition.partition.root_dir.display_tree_data(1)
-    # elif args.action == "export":
-    #     # read_fs(args.input)
-    #     filesystem = EBR(args.input)
-    #     filesystem.analyse_header()
-    #     # content = partition.get_filesystem_entry_content(args.path)
-    #     for partition in filesystem.elements:
-    #         content = partition.partition.get_filesystem_entry_content(args.path)
-    #         if content != None:
-    #             break
-    #     if content != None:
-    #         if isinstance(content, str):
-    #             content = content.encode(encoding="utf-8")
-    #         with open(args.output, "bw") as f:
-    #             f.write(content)
-    #     else:
-    #         print("Path doesn't exist")
+#     if args.action == "analyse":
+#         # read_fs(args.input)
+#         filesystem = EBR(args.input)
+#         filesystem.analyse_header()
+#         filesystem.display_header_data()
+#     # elif args.action == "tree":
+#     #     # read_fs(args.input)
+#     #     filesystem = EBR(args.input)
+#     #     filesystem.analyse_header()
+#     #     # partition.root_dir.display_self_data()
+#     #     # partition.root_dir.display_tree_data(1)
+#     #     for partition in filesystem.elements:
+#     #         partition.partition.root_dir.display_self_data()
+#     #         partition.partition.root_dir.display_tree_data(1)
+#     # elif args.action == "export":
+#     #     # read_fs(args.input)
+#     #     filesystem = EBR(args.input)
+#     #     filesystem.analyse_header()
+#     #     # content = partition.get_filesystem_entry_content(args.path)
+#     #     for partition in filesystem.elements:
+#     #         content = partition.partition.get_filesystem_entry_content(args.path)
+#     #         if content != None:
+#     #             break
+#     #     if content != None:
+#     #         if isinstance(content, str):
+#     #             content = content.encode(encoding="utf-8")
+#     #         with open(args.output, "bw") as f:
+#     #             f.write(content)
+#     #     else:
+#     #         print("Path doesn't exist")

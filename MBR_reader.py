@@ -20,7 +20,7 @@ class MBR_entry:
     def __init__(self, partition_entry: bytes, filesystem):
         self.filesystem = filesystem
         self.partition_entry = partition_entry
-        self.partition_type_whitelist = ["exFAT"]
+        self.partition_type_whitelist = filesystem.partition_type_whitelist
         self.partition_type_str = None
 
         # self.content = self.filesystem.get_partition_entry(self.entry_value)
@@ -54,7 +54,7 @@ class MBR_entry:
         self.partition_type_str = MBR_EBR_partition_type_int_to_str(self.partition_type)
         
         if self.partition_type_str == "Extended CHS" or self.partition_type_str == "Extended LBA":
-            self.partition = EBR(self.filesystem.input_path, self.LBA_of_partition_start, self.LBA_of_partition_start)
+            self.partition = EBR(self.filesystem.input_path, self.LBA_of_partition_start, self.LBA_of_partition_start, self.partition_type_whitelist)
             self.partition.analyse_header()
             # print(len(self.filesystem.elements))
             # self.filesystem.elements += self.partition.elements
@@ -64,6 +64,12 @@ class MBR_entry:
     def get_self_data(self):
         # return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
         pass
+
+    def is_readable(self):
+        if self.partition_type_str in self.partition_type_whitelist:
+            return True
+        else:
+            return False
     
     def display_self_data(self):
         # print(self.get_self_data(), end="")
@@ -74,7 +80,7 @@ class MBR_entry:
         # print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
         # print(f"LBA of partition start : {self.LBA_of_partition_start}")
         # print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
-        print(f"{self.partition_type} : {self.partition_type_str} : {hex(self.LBA_of_partition_start*512)} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
+        print(f"{self.partition_type} : {self.partition_type_str} : {hex(self.LBA_of_partition_start*512)} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition} : {self.is_readable()}")
 
 class MBR:
     input_path: str
@@ -90,9 +96,12 @@ class MBR:
 
     elements: list[MBR_entry]
 
-    def __init__(self, file_path: str):
+    partition_type_whitelist: list[str]
+
+    def __init__(self, file_path: str, partition_type_whitelist):
         self.input_path = file_path
         self.elements = []
+        self.partition_type_whitelist = partition_type_whitelist
     
     def analyse_header(self):
         boot_sector = None
@@ -166,6 +175,8 @@ class MBR:
         pass
 
 if __name__=="__main__":
+    partition_whitelist = ["HPFS/NTFS/exFAT"]
+
     parser = argparse.ArgumentParser(prog="fs_reader",
                                      description="read a GPT file system")
     
@@ -174,8 +185,8 @@ if __name__=="__main__":
     parser1 = subparser1.add_parser("analyse")
     parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
 
-    # parser1 = subparser1.add_parser("tree")
-    # parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
+    parser1 = subparser1.add_parser("tree")
+    parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
 
     # parser1 = subparser1.add_parser("export")
     # parser1.add_argument("-i", "--input", action="store", required=True, help="input iso file")
@@ -186,18 +197,18 @@ if __name__=="__main__":
 
     if args.action == "analyse":
         # read_fs(args.input)
-        filesystem = MBR(args.input)
+        filesystem = MBR(args.input, partition_whitelist)
         filesystem.analyse_header()
         filesystem.display_header_data()
-    # elif args.action == "tree":
-    #     # read_fs(args.input)
-    #     filesystem = MBR(args.input)
-    #     filesystem.analyse_header()
-    #     # partition.root_dir.display_self_data()
-    #     # partition.root_dir.display_tree_data(1)
-    #     for partition in filesystem.elements:
-    #         partition.partition.root_dir.display_self_data()
-    #         partition.partition.root_dir.display_tree_data(1)
+    elif args.action == "tree":
+        # read_fs(args.input)
+        filesystem = MBR(args.input, partition_whitelist)
+        filesystem.analyse_header()
+        # partition.root_dir.display_self_data()
+        # partition.root_dir.display_tree_data(1)
+        for partition in filesystem.elements:
+            partition.partition.root_dir.display_self_data()
+            partition.partition.root_dir.display_tree_data(1)
     # elif args.action == "export":
     #     # read_fs(args.input)
     #     filesystem = MBR(args.input)
