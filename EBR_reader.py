@@ -59,6 +59,8 @@ class EBR_entry:
             # self.filesystem.elements += self.partition.elements
             # print(len(self.filesystem.elements))
             # self.partition.display_header_data()
+        else:
+            self.LBA_of_partition_start += self.filesystem.gen_offset
     
     def get_self_data(self):
         # return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
