@@ -74,7 +74,7 @@ class MBR_entry:
         # print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
         # print(f"LBA of partition start : {self.LBA_of_partition_start}")
         # print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
-        print(f"{self.partition_type} : {self.partition_type_str} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
+        print(f"{self.partition_type} : {self.partition_type_str} : {hex(self.LBA_of_partition_start*512)} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
 
 class MBR:
     input_path: str

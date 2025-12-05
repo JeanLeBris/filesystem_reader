@@ -55,6 +55,7 @@ class EBR_entry:
         if self.partition_type_str == "Extended CHS" or self.partition_type_str == "Extended LBA":
             self.partition = EBR(self.filesystem.input_path, self.filesystem.ebr_offset + self.LBA_of_partition_start, self.filesystem.ebr_offset)
             self.partition.analyse_header()
+            self.LBA_of_partition_start += self.filesystem.ebr_offset
             # print(len(self.filesystem.elements))
             # self.filesystem.elements += self.partition.elements
             # print(len(self.filesystem.elements))
@@ -75,7 +76,7 @@ class EBR_entry:
         # print(f"CHS address of last partition sector : {self.CHS_address_of_last_partition_sector}")
         # print(f"LBA of partition start : {self.LBA_of_partition_start}")
         # print(f"Number of sectors in partition : {self.number_of_sectors_in_partition}")
-        print(f"{self.partition_type} : {self.partition_type_str} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
+        print(f"{self.partition_type} : {self.partition_type_str} : {hex(self.LBA_of_partition_start*512)} : {self.LBA_of_partition_start} : {self.number_of_sectors_in_partition}")
 
 class EBR:
     input_path: str
