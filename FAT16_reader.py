@@ -32,13 +32,13 @@ class FAT16_filesystem_entry:
             cluster_value = convert_bytes_to_int(self.content, 26, 2, "le")
             self.first_cluster = cluster_value
             self.content = bytes()
-        if cluster_value == 0:
-            self.content = filesystem.get_cluster_value(cluster_value)
-            # self.name = convert_bytes_to_str(self.content, 0, 11)
-            # self.type = "dir"
-            cluster_value = convert_bytes_to_int(self.content, 26, 2, "le")
-            self.first_cluster = cluster_value
-            self.content = bytes()
+        # if cluster_value == 0:
+        #     self.content = filesystem.get_cluster_value(cluster_value)
+        #     # self.name = convert_bytes_to_str(self.content, 0, 11)
+        #     # self.type = "dir"
+        #     cluster_value = convert_bytes_to_int(self.content, 26, 2, "le")
+        #     self.first_cluster = cluster_value
+        #     self.content = bytes()
         if size == 0:
             size = self.filesystem.bytes_per_sector_shift * self.filesystem.sectors_per_cluster_shift
         if self.no_FAT_chain:
@@ -54,10 +54,10 @@ class FAT16_filesystem_entry:
                     break
                 elif filesystem.get_FAT_value(cluster_value) == 0xfff7: # Bad cluster
                     break
-                # elif filesystem.get_FAT_value(cluster_value) == 0x0001: # Undefined
-                #     break
-                # elif filesystem.get_FAT_value(cluster_value) == 0x0000: # Undefined
-                #     break
+                elif filesystem.get_FAT_value(cluster_value) == 0x0001: # Reserved
+                    break
+                elif filesystem.get_FAT_value(cluster_value) == 0x0000: # Free cluster
+                    break
                 else:
                     cluster_value = filesystem.get_FAT_value(cluster_value)
         # print("done")
@@ -318,7 +318,7 @@ class FAT16:
     
     def get_cluster_value(self, cluster_value: int):
         data = None
-        if cluster_value >= 0:
+        if cluster_value >= 2:
             with open(self.input_path, "br") as f:
                 f.seek(self.offset + (self.data_area_offset + (cluster_value - 2) * self.sectors_per_cluster_shift) * self.bytes_per_sector_shift, 0)
                 data = f.read(self.sectors_per_cluster_shift * self.bytes_per_sector_shift)
