@@ -16,7 +16,8 @@ def convert_bytes_to_str(input :bytes, offset :int, size :int):
     value = ""
     # for i in word:
     #     print(hex(i))
-    value += str(word)
+    value += word.decode(encoding="utf-8")
+    value = value.replace(bytes([0, ]).decode(encoding="utf-8"), '')
     return value
 
 def convert_bytes_to_bytes(input :bytes, offset :int, size :int):

@@ -25,6 +25,20 @@ class FAT16_filesystem_entry:
         self.content = bytes()
         self.data_byte_length = None
         self.no_FAT_chain = contiguous
+        if cluster_value == -1:
+            self.content = filesystem.get_cluster_value(cluster_value)
+            self.name = convert_bytes_to_str(self.content, 0, 11)
+            self.type = "dir"
+            cluster_value = convert_bytes_to_int(self.content, 26, 2, "le")
+            self.first_cluster = cluster_value
+            self.content = bytes()
+        if cluster_value == 0:
+            self.content = filesystem.get_cluster_value(cluster_value)
+            # self.name = convert_bytes_to_str(self.content, 0, 11)
+            # self.type = "dir"
+            cluster_value = convert_bytes_to_int(self.content, 26, 2, "le")
+            self.first_cluster = cluster_value
+            self.content = bytes()
         if size == 0:
             size = self.filesystem.bytes_per_sector_shift * self.filesystem.sectors_per_cluster_shift
         if self.no_FAT_chain:
@@ -34,73 +48,53 @@ class FAT16_filesystem_entry:
             while True:
                 # print(filesystem.get_FAT_value(cluster_value))
                 self.content += filesystem.get_cluster_value(cluster_value)
-                if filesystem.get_FAT_value(cluster_value) == 0xffffffff: # EOF
+                if filesystem.get_FAT_value(cluster_value) == 0xffff: # EOF
                     break
-                elif filesystem.get_FAT_value(cluster_value) == 0xfffffff8: # Media descriptor
+                elif filesystem.get_FAT_value(cluster_value) == 0xfff8: # Media descriptor
                     break
-                elif filesystem.get_FAT_value(cluster_value) == 0xfffffff7: # Bad cluster
+                elif filesystem.get_FAT_value(cluster_value) == 0xfff7: # Bad cluster
                     break
-                elif filesystem.get_FAT_value(cluster_value) == 0x00000001: # Undefined
-                    break
-                elif filesystem.get_FAT_value(cluster_value) == 0x00000000: # Undefined
-                    break
+                # elif filesystem.get_FAT_value(cluster_value) == 0x0001: # Undefined
+                #     break
+                # elif filesystem.get_FAT_value(cluster_value) == 0x0000: # Undefined
+                #     break
                 else:
                     cluster_value = filesystem.get_FAT_value(cluster_value)
         # print("done")
     
     def process_data(self):
-        i = 0
+        if convert_bytes_to_str(self.content, 0, 11).replace(" ", "") == ".":
+            i = 2
+        else:
+            i = 1
+        str_buffer = ""
         while convert_bytes_to_int(self.content, i * 32, 1, "le") != 0x00:
             strand = convert_bytes_to_bytes(self.content, i * 32, 32)
-            str_buffer = ""
-            if convert_bytes_to_int(strand, 0, 1, "le") == 0x81:
-                print("Allocation Bitmap")
-            elif convert_bytes_to_int(strand, 0, 1, "le") == 0x82:
-                print("Up-case Table")
-            elif convert_bytes_to_int(strand, 0, 1, "le") == 0x83:
-                self.name = convert_bytes_to_bytes(strand, 2, 22).decode(encoding="utf-16").replace(chr(0x00), "")
-                self.type = "dir"
-            elif convert_bytes_to_int(strand, 0, 1, "le") == 0x85:
-                type_buffer = "dir" if ((convert_bytes_to_int(strand, 4, 2, "le") >> 4) & 1) == 1 else "file"
-                for j in range(convert_bytes_to_int(strand, 1, 1, "le")):
-                    i+=1
-                    strand = convert_bytes_to_bytes(self.content, i * 32, 32)
-                    if convert_bytes_to_int(strand, 0, 1, "le") == 0xC0:
-                        no_FAT_chain_buffer = (convert_bytes_to_int(strand, 1, 1, "le") >> 1) & 1
-                        cluster_buffer = convert_bytes_to_int(strand, 20, 4, "le")
-                        data_length_buffer = convert_bytes_to_int(strand, 24, 8, "le")
-                    elif convert_bytes_to_int(strand, 0, 1, "le") == 0xC1:
-                        str_buffer += convert_bytes_to_bytes(strand, 2, 30).decode(encoding="utf-16").replace(chr(0x00), "")
-                self.elements.append(FAT16_filesystem_entry(cluster_buffer, self.filesystem, no_FAT_chain_buffer, data_length_buffer))
+            cluster_buffer = convert_bytes_to_int(strand, 26, 2, "le")
+
+            if cluster_buffer == 0:
+                str_buffer = self.get_name_bytes_from_entry(strand).decode(encoding="utf-16").replace(bytes([0xff, 0xff]).decode(encoding="utf-16"), '').replace(bytes([0, 0]).decode(encoding="utf-16"), '') + str_buffer
+            else:
+                data_length_buffer = convert_bytes_to_int(strand, 28, 4, "le")
+                type_buffer = "dir" if ((convert_bytes_to_int(strand, 11, 1, "le") >> 4) & 1) == 1 else "file"
+                self.elements.append(FAT16_filesystem_entry(cluster_buffer, self.filesystem, False, data_length_buffer))
                 self.elements[-1].name = str_buffer
                 self.elements[-1].type = type_buffer
                 if type_buffer == "dir":
                     self.elements[-1].process_data()
                 elif type_buffer == "file":
                     self.elements[-1].data_byte_length = data_length_buffer
-                self.elements[-1].no_FAT_chain = no_FAT_chain_buffer
-            elif convert_bytes_to_int(strand, 0, 1, "le") == 0xA0:
-                print("Volume GUID")
-            elif convert_bytes_to_int(strand, 0, 1, "le") == 0xA1:
-                print("TexFAT Padding")
-            elif convert_bytes_to_int(strand, 0, 1, "le") == 0xA2:
-                print("Windows CE Access Control Table")
-            # else:
-            #     entry_type = "sec" if ((convert_bytes_to_int(strand, 0, 1, "le") >> 6) & 1) == 1 else "pri"
-            #     if entry_type == "pri":
-            #         print(f"generic primary directory entry : {convert_bytes_to_int(strand, 20, 4, "le")} : {convert_bytes_to_int(strand, 24, 8, "le")}")
-            #         for j in range(convert_bytes_to_int(strand, 1, 1, "le")):
-            #             i+=1
-            #             strand = convert_bytes_to_bytes(self.content, i * 32, 32)
-            #             if convert_bytes_to_int(strand, 0, 1, "le") == 0x40:
-            #                 print("Stream Extension bis")
-            #             elif convert_bytes_to_int(strand, 0, 1, "le") == 0x41:
-            #                 str_buffer += convert_bytes_to_bytes(strand, 2, 30).decode(encoding="utf-16")
-            #         print(str_buffer)
-            #     elif entry_type == "sec":
-            #         print("sec")
-            
+                self.elements[-1].no_FAT_chain = False
+                str_buffer = ""
+
             i+=1
+    
+    def get_name_bytes_from_entry(self, strand: bytes):
+        sanitized_bytes = bytes()
+        sanitized_bytes += convert_bytes_to_bytes(strand, 1, 10)
+        sanitized_bytes += convert_bytes_to_bytes(strand, 14, 12)
+        sanitized_bytes += convert_bytes_to_bytes(strand, 28, 4)
+        return sanitized_bytes
     
     def get_self_data(self):
         return f"{self.type} : {self.name} : {self.first_cluster} : {self.no_FAT_chain}\n"
@@ -181,6 +175,7 @@ class FAT16:
     number_of_sectors_per_track: int
     number_of_heads: int
     hidden_sectors: int
+    sectors_in_32bit_field: int
 
     # FAT region
     number_of_fats: int
@@ -189,10 +184,13 @@ class FAT16:
     second_fat_offset: int
     second_fat_length: int
 
+    # Root dir
+    root_dir_offset: int
+    root_dir_length: int
+
     # Data region
-    cluster_count: int
-    cluster_heap_offset: int
-    cluster_heap_length: int
+    data_area_offset: int
+    data_area_length: int
 
     # Root directory
     first_cluster_of_root_directory: int
@@ -210,7 +208,7 @@ class FAT16:
             boot_sector = f.read(512)
         
         self.bytes_per_sector_shift = convert_bytes_to_int(boot_sector, 11, 2, "le")
-        self.sectors_per_cluster_shift = 2**convert_bytes_to_int(boot_sector, 13, 1, "le")
+        self.sectors_per_cluster_shift = convert_bytes_to_int(boot_sector, 13, 1, "le")
         self.sectors_in_reserved_area = convert_bytes_to_int(boot_sector, 14, 2, "le")
         self.boot_number_of_fats = convert_bytes_to_int(boot_sector, 16, 1, "le")
         self.root_entry_count = convert_bytes_to_int(boot_sector, 17, 2, "le")
@@ -220,6 +218,8 @@ class FAT16:
         self.number_of_sectors_per_track = convert_bytes_to_int(boot_sector, 24, 2, "le")
         self.number_of_heads = convert_bytes_to_int(boot_sector, 26, 2, "le")
         self.hidden_sectors = convert_bytes_to_int(boot_sector, 28, 4, "le")
+        self.sectors_in_32bit_field = convert_bytes_to_int(boot_sector, 32, 4, "le")
+        
         self.fs_name = convert_bytes_to_bytes(boot_sector, 3, 8).decode(encoding="utf-8")
         self.partition_offset = convert_bytes_to_int(boot_sector, 64, 8, "le") # Offset of the exFAT volume origin from top of the hosting physical drive in unit of sector (1 unit of sector = 512 bytes)
         self.volume_length = convert_bytes_to_int(boot_sector, 72, 8, "le")
@@ -239,19 +239,24 @@ class FAT16:
         self.boot_signature = convert_bytes_to_bytes(boot_sector, 510, 216)
 
         self.number_of_fats = self.boot_number_of_fats
-        self.first_fat_offset = self.boot_fat_offset
+        self.first_fat_offset = self.sectors_in_reserved_area
         self.first_fat_length = self.boot_fat_length
         self.second_fat_offset = self.first_fat_offset+self.first_fat_length
         self.second_fat_length = self.first_fat_length*(self.number_of_fats-1)
 
-        self.cluster_count = self.boot_cluster_count
-        self.cluster_heap_offset = self.boot_cluster_heap_offset
-        self.cluster_heap_length = self.cluster_count*self.sectors_per_cluster_shift
+        self.root_dir_offset = self.first_fat_offset+self.number_of_fats*self.boot_fat_length
+        self.root_dir_length = int((32 * self.root_entry_count) / self.bytes_per_sector_shift)
 
-        self.first_cluster_of_root_directory = self.boot_first_cluster_of_root_directory
+        self.data_area_offset = self.root_dir_offset + self.root_dir_length
+        if self.sectors_in_16bit_field != 0:
+            self.data_area_length = self.sectors_in_16bit_field - self.data_area_offset
+        else:
+            self.data_area_length = self.sectors_in_32bit_field - self.data_area_offset
 
-        # self.root_dir = FAT16_filesystem_entry(self.first_cluster_of_root_directory, self)
-        # self.root_dir.process_data()
+        # self.first_cluster_of_root_directory = self.boot_first_cluster_of_root_directory
+
+        self.root_dir = FAT16_filesystem_entry(-1, self)
+        self.root_dir.process_data()
     
     def display_boot_sector_data(self):
         print("File system name : ", self.fs_name)
@@ -284,45 +289,45 @@ class FAT16:
         print("Number of sectors per track : " + str(self.number_of_sectors_per_track))
         print("Number of heads : " + str(self.number_of_heads))
         print("Number of hidden sectors : " + str(self.hidden_sectors))
+        print("Total number of sectors in 32 bit field : " + str(self.sectors_in_32bit_field))
         print()
         print("Areas :")
         print("Main boot region :")
         print(f"Boot sector :\t\t\t{0}\t{1}")
-        print(f"Extended boot sectors : \t{1}\t{8}")
-        print(f"OEM parameters :\t\t{9}\t{1}")
-        print(f"Reserved sectors :\t\t{10}\t{1}")
-        print(f"Boot checksum :\t\t\t{11}\t{1}")
-        print("Backup boot region :")
-        print(f"Boot sector :\t\t\t{12}\t{1}")
-        print(f"Extended boot sectors : \t{13}\t{8}")
-        print(f"OEM parameters :\t\t{21}\t{1}")
-        print(f"Reserved sectors :\t\t{22}\t{1}")
-        print(f"Boot checksum :\t\t\t{23}\t{1}")
+        print(f"Reserved sectors :\t\t{1}\t{self.sectors_in_reserved_area-1}")
         print("FAT region :")
-        print(f"FAT alignment :\t\t\t{24}\t{self.first_fat_offset-24}")
         print(f"First FAT :\t\t\t{self.first_fat_offset}\t{self.first_fat_length}")
         print(f"Second FAT :\t\t\t{self.second_fat_offset}\t{self.second_fat_length}")
+        print("Root region :")
+        print(f"Root directory :\t\t{self.root_dir_offset}\t{self.root_dir_length}")
         print("Data region :")
-        print(f"Cluster heap alignment :\t{self.first_fat_offset+self.first_fat_length*self.number_of_fats}\t{self.cluster_heap_offset-(self.first_fat_offset+self.first_fat_length*self.number_of_fats)}")
-        print(f"Cluster heap :\t\t\t{self.cluster_heap_offset}\t{self.cluster_heap_length}")
-        print(f"Excess space :\t\t\t{self.cluster_heap_offset+self.cluster_heap_length}\t{self.volume_length-(self.cluster_heap_offset+self.cluster_heap_length)}")
+        print(f"Data areas :\t\t\t{self.data_area_offset}\t{self.data_area_length}")
     
     def get_FAT_value(self, cluster_value: int):
         data = None
-        with open(self.input_path, "br") as f:
-            f.seek(self.offset + self.first_fat_offset * self.bytes_per_sector_shift, 0)
-            data = f.read((self.first_fat_length + self.second_fat_length) * self.bytes_per_sector_shift)
-        # address = self.first_fat_offset * self.bytes_per_sector_shift
-        # address += cluster_value * 4
-        return convert_bytes_to_int(data, cluster_value * 4, 4, "le")
+        if cluster_value >= 0:
+            with open(self.input_path, "br") as f:
+                f.seek(self.offset + self.first_fat_offset * self.bytes_per_sector_shift, 0)
+                data = f.read((self.first_fat_length + self.second_fat_length) * self.bytes_per_sector_shift)
+            data = convert_bytes_to_int(data, cluster_value * 2, 2, "le")
+            # address = self.first_fat_offset * self.bytes_per_sector_shift
+            # address += cluster_value * 4
+        else:
+            data = -1
+        return data
     
     def get_cluster_value(self, cluster_value: int):
         data = None
-        with open(self.input_path, "br") as f:
-            f.seek(self.offset + (self.cluster_heap_offset + (cluster_value - 2) * self.sectors_per_cluster_shift) * self.bytes_per_sector_shift, 0)
-            data = f.read(self.sectors_per_cluster_shift * self.bytes_per_sector_shift)
-        # address = self.first_fat_offset * self.bytes_per_sector_shift
-        # address += cluster_value * 4
+        if cluster_value >= 0:
+            with open(self.input_path, "br") as f:
+                f.seek(self.offset + (self.data_area_offset + (cluster_value - 2) * self.sectors_per_cluster_shift) * self.bytes_per_sector_shift, 0)
+                data = f.read(self.sectors_per_cluster_shift * self.bytes_per_sector_shift)
+            # address = self.first_fat_offset * self.bytes_per_sector_shift
+            # address += cluster_value * 4
+        else:
+            with open(self.input_path, "br") as f:
+                f.seek(self.offset + self.root_dir_offset * self.bytes_per_sector_shift, 0)
+                data = f.read(self.root_dir_length * self.bytes_per_sector_shift)
         return data
     
     def get_filesystem_entry(self, input_path: str):
