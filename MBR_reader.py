@@ -1,6 +1,7 @@
 import argparse
 from utils import *
 from exFAT_reader import *
+from FAT16_reader import *
 from EBR_reader import *
 
 class MBR_entry:
@@ -73,6 +74,10 @@ class MBR_entry:
                 self.partition = exFAT(self.filesystem.input_path, self.LBA_of_partition_start*512)
                 self.has_a_partition = True
                 self.partition.analyse_boot_sector()
+        elif self.partition_type_str == "FAT16":
+            self.partition = FAT16(self.filesystem.input_path, self.LBA_of_partition_start*512)
+            self.has_a_partition = True
+            self.partition.analyse_boot_sector()
     
     def get_self_data(self):
         # return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
@@ -188,7 +193,7 @@ class MBR:
         pass
 
 if __name__=="__main__":
-    partition_whitelist = ["HPFS/NTFS/exFAT"]
+    partition_whitelist = ["FAT16", "HPFS/NTFS/exFAT"]
 
     parser = argparse.ArgumentParser(prog="fs_reader",
                                      description="read a GPT file system")
