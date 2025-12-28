@@ -2,6 +2,7 @@ import argparse
 from utils import *
 from exFAT_reader import *
 from FAT16_reader import *
+from FAT32_reader import *
 
 class EBR_entry:
     partition_entry: bytes
@@ -79,6 +80,10 @@ class EBR_entry:
                 self.partition.analyse_boot_sector()
         elif self.partition_type_str == "FAT16":
             self.partition = FAT16(self.filesystem.input_path, self.LBA_of_partition_start*512)
+            self.has_a_partition = True
+            self.partition.analyse_boot_sector()
+        elif self.partition_type_str == "FAT32":
+            self.partition = FAT32(self.filesystem.input_path, self.LBA_of_partition_start*512)
             self.has_a_partition = True
             self.partition.analyse_boot_sector()
     
