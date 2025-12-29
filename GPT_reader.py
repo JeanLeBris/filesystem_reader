@@ -33,8 +33,9 @@ class GPT_entry:
         self.attribute_flags = convert_bytes_to_int(self.content, 48, 8, "le")
         self.partition_name = convert_bytes_to_bytes(self.content, 56, 72).decode(encoding="utf-16")
 
-        self.partition = exFAT(self.filesystem.input_path, self.first_LBA*512)
-        self.partition.analyse_boot_sector()
+        # self.partition = exFAT(self.filesystem.input_path, self.first_LBA*512)
+        # self.partition.analyse_boot_sector()
+        self.partition = None
     
     def get_self_data(self):
         return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
@@ -99,7 +100,8 @@ class GPT:
                 self.elements.append(element)
             else:
                 keep_going = False
-            i+=self.size_of_partition_entry
+            # i+=self.size_of_partition_entry
+            i+=1
 
     def display_header_data(self):
         print(f"File system name : {self.fs_name}")
@@ -120,7 +122,8 @@ class GPT:
         print("Filesystems :")
         for element in self.elements:
             element.display_self_data()
-            element.partition.display_boot_sector_data()
+            if element.partition != None:
+                element.partition.display_boot_sector_data()
     
     def get_partition_entry(self, entry_value: int):
         content = None
