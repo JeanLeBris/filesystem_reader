@@ -59,6 +59,7 @@ class GPT_entry:
             # print("exFAT : " + str(self.first_LBA))
             self.partition = exFAT(self.filesystem.input_path, self.first_LBA*512)
             self.partition.analyse_boot_sector()
+        # self.partition = get_fs_from_sector(boot_sector, self.filesystem.input_path, self.first_LBA*512)
     
     def get_self_data(self):
         return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"

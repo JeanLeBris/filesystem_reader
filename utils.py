@@ -1,3 +1,7 @@
+# from FAT16_reader import *
+# from FAT32_reader import *
+# from exFAT_reader import *
+
 def convert_bytes_to_int(input :bytes, offset :int, size :int, type :str):
     word = input[offset:offset+size]
     value = 0
@@ -81,3 +85,23 @@ def guess_fs_from_sector(input: bytes):
             return "FAT32"
     else:
         return "undefined"
+
+# def get_fs_from_sector(input: bytes, path: str, offset: int):
+#     fs_type = guess_fs_from_sector(input)
+#     partition = None
+#     if fs_type == "FAT12":
+#         # print("FAT12 : " + str(self.first_LBA))
+#         pass
+#     elif fs_type == "FAT16":
+#         # print("FAT16 : " + str(self.first_LBA))
+#         partition = FAT16(path, offset)
+#         partition.analyse_boot_sector()
+#     elif fs_type == "FAT32":
+#         # print("FAT32 : " + str(self.first_LBA))
+#         partition = FAT32(path, offset)
+#         partition.analyse_boot_sector()
+#     elif fs_type == "exFAT":
+#         # print("exFAT : " + str(self.first_LBA))
+#         partition = exFAT(path, offset)
+#         partition.analyse_boot_sector()
+#     return partition
