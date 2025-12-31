@@ -43,3 +43,41 @@ def MBR_EBR_partition_type_int_to_str(partition_type: int):
         case _:
             result = "undefined"
     return result
+
+def guess_fs_from_sector(input: bytes):
+    signature = convert_bytes_to_int(input, 510, 2, "le")
+    if signature == 0xaa55: # FAT-like filesystem
+        if convert_bytes_to_str(input, 3, 8).replace(" ", "") == "EXFAT":
+            return "exFAT"
+        if convert_bytes_to_str(input, 3, 8).replace(" ", "") == "NTFS":
+            return "NTFS"
+        
+        BPB_SecPerClus = convert_bytes_to_int(input, 13, 1, "le")
+        totsec16 = convert_bytes_to_int(input, 19, 2, "le")
+        totsec32 = convert_bytes_to_int(input, 32, 4, "le")
+        BPB_TotSec = totsec16 if totsec16 > 0 else totsec32
+        BPB_BytsPerSec = convert_bytes_to_int(input, 11, 2, "le")
+        BPB_RootEntCnt = convert_bytes_to_int(input, 17, 2, "le")
+        fatsz16 = convert_bytes_to_int(input, 22, 2, "le")
+        fatsz32 = convert_bytes_to_int(input, 36, 4, "le")
+        BPB_FATSz = fatsz16 if fatsz16 > 0 else fatsz32
+        BPB_NumFATs = convert_bytes_to_int(input, 16, 1, "le")
+        BPB_ResvdSecCnt = convert_bytes_to_int(input, 14, 2, "le")
+
+
+        FatStartSector = BPB_ResvdSecCnt
+        FatSectors = BPB_FATSz * BPB_NumFATs
+        RootDirStartSector = FatStartSector + FatSectors
+        RootDirSectors = (32 * BPB_RootEntCnt + BPB_BytsPerSec - 1) / BPB_BytsPerSec
+        DataStartSector = RootDirStartSector + RootDirSectors
+        DataSectors = BPB_TotSec - DataStartSector
+        CountofClusters = DataSectors / BPB_SecPerClus
+
+        if CountofClusters <= 4085:
+            return "FAT12"
+        elif CountofClusters <= 65525:
+            return "FAT16"
+        else:
+            return "FAT32"
+    else:
+        return "undefined"

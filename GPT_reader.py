@@ -1,5 +1,7 @@
 import argparse
 from utils import *
+from FAT16_reader import *
+from FAT32_reader import *
 from exFAT_reader import *
 
 class GPT_entry:
@@ -36,6 +38,27 @@ class GPT_entry:
         # self.partition = exFAT(self.filesystem.input_path, self.first_LBA*512)
         # self.partition.analyse_boot_sector()
         self.partition = None
+
+        with open(self.filesystem.input_path, "br") as f:
+            f.seek(self.first_LBA*512, 0)
+            boot_sector = f.read(512)
+        
+        fs_type = guess_fs_from_sector(boot_sector)
+        if fs_type == "FAT12":
+            # print("FAT12 : " + str(self.first_LBA))
+            pass
+        elif fs_type == "FAT16":
+            # print("FAT16 : " + str(self.first_LBA))
+            self.partition = FAT16(self.filesystem.input_path, self.first_LBA*512)
+            self.partition.analyse_boot_sector()
+        elif fs_type == "FAT32":
+            # print("FAT32 : " + str(self.first_LBA))
+            self.partition = FAT32(self.filesystem.input_path, self.first_LBA*512)
+            self.partition.analyse_boot_sector()
+        elif fs_type == "exFAT":
+            # print("exFAT : " + str(self.first_LBA))
+            self.partition = exFAT(self.filesystem.input_path, self.first_LBA*512)
+            self.partition.analyse_boot_sector()
     
     def get_self_data(self):
         return f"{self.partition_name} : {self.first_LBA} : {self.last_LBA}\n"
@@ -163,8 +186,9 @@ if __name__=="__main__":
         # partition.root_dir.display_self_data()
         # partition.root_dir.display_tree_data(1)
         for partition in filesystem.elements:
-            partition.partition.root_dir.display_self_data()
-            partition.partition.root_dir.display_tree_data(1)
+            if partition.partition != None:
+                partition.partition.root_dir.display_self_data()
+                partition.partition.root_dir.display_tree_data(1)
     elif args.action == "export":
         # read_fs(args.input)
         filesystem = GPT(args.input)
