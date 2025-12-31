@@ -44,6 +44,8 @@ def MBR_EBR_partition_type_int_to_str(partition_type: int):
             result = "Extended LBA"
         case 131:
             result = "Linux"
+        case 238:
+            result = "GPT protective MBR"
         case _:
             result = "undefined"
     return result
@@ -53,7 +55,7 @@ def guess_fs_from_sector(input: bytes):
     if signature == 0xaa55: # FAT-like filesystem
         if convert_bytes_to_str(input, 3, 8).replace(" ", "") == "EXFAT":
             return "exFAT"
-        if convert_bytes_to_str(input, 3, 8).replace(" ", "") == "NTFS":
+        elif convert_bytes_to_str(input, 3, 8).replace(" ", "") == "NTFS":
             return "NTFS"
         
         BPB_SecPerClus = convert_bytes_to_int(input, 13, 1, "le")
@@ -105,3 +107,17 @@ def guess_fs_from_sector(input: bytes):
 #         partition = exFAT(path, offset)
 #         partition.analyse_boot_sector()
 #     return partition
+
+# def guess_ps_from_file(input: str):
+#     with open(input, "br") as f:
+#         # f.seek(512, 0)
+#         boot_sector = f.read(512)
+    
+#     if boot_sector != bytes([0 for i in range(512)]):
+#         pass
+#     else:
+#         with open(input, "br") as f:
+#             f.seek(512, 0)
+#             boot_sector = f.read(512)
+#         if convert_bytes_to_str(boot_sector, 0, 8) == "EFI PART":
+#             return "GPT"

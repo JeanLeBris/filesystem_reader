@@ -57,6 +57,7 @@ class MBR_entry:
 
         self.partition_type_str = MBR_EBR_partition_type_int_to_str(self.partition_type)
         
+        self.partition = None
         if self.partition_type_str == "Extended CHS" or self.partition_type_str == "Extended LBA":
             self.partition = EBR(self.filesystem.input_path, self.LBA_of_partition_start, self.LBA_of_partition_start, self.partition_type_whitelist)
             self.has_a_partition = True

@@ -54,9 +54,11 @@ class exFAT_filesystem_entry:
             strand = convert_bytes_to_bytes(self.content, i * 32, 32)
             str_buffer = ""
             if convert_bytes_to_int(strand, 0, 1, "le") == 0x81:
-                print("Allocation Bitmap")
+                # print("Allocation Bitmap")
+                pass
             elif convert_bytes_to_int(strand, 0, 1, "le") == 0x82:
-                print("Up-case Table")
+                # print("Up-case Table")
+                pass
             elif convert_bytes_to_int(strand, 0, 1, "le") == 0x83:
                 self.name = convert_bytes_to_bytes(strand, 2, 22).decode(encoding="utf-16").replace(chr(0x00), "")
                 self.type = "dir"
@@ -80,11 +82,14 @@ class exFAT_filesystem_entry:
                     self.elements[-1].data_byte_length = data_length_buffer
                 self.elements[-1].no_FAT_chain = no_FAT_chain_buffer
             elif convert_bytes_to_int(strand, 0, 1, "le") == 0xA0:
-                print("Volume GUID")
+                # print("Volume GUID")
+                pass
             elif convert_bytes_to_int(strand, 0, 1, "le") == 0xA1:
-                print("TexFAT Padding")
+                # print("TexFAT Padding")
+                pass
             elif convert_bytes_to_int(strand, 0, 1, "le") == 0xA2:
-                print("Windows CE Access Control Table")
+                # print("Windows CE Access Control Table")
+                pass
             # else:
             #     entry_type = "sec" if ((convert_bytes_to_int(strand, 0, 1, "le") >> 6) & 1) == 1 else "pri"
             #     if entry_type == "pri":
