@@ -120,6 +120,7 @@ class MBR(partitionsystem):
     def __init__(self, file_path: str, partition_type_whitelist: list[str], offset: int = 0):
         self.partition_type_whitelist = partition_type_whitelist
         super().__init__(file_path, offset)
+        self.partition_type = "MBR partition system"
 
         self.analyse_boot_sector()
     
